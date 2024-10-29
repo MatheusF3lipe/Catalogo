@@ -1,6 +1,7 @@
 ﻿namespace Catalogo.Models;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 [Table("Produtos")]
 public class Produto
@@ -22,5 +23,6 @@ public class Produto
     public float Estoque {  get; set; }
     public DateTime Cadastro { get; set; }
     public int CategoriaId {  get; set; }
+    [JsonIgnore]
     public Categoria? Categoria { get; set; }
 }
