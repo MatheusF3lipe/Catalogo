@@ -1,5 +1,6 @@
 ﻿using Catalogo.Context;
 using Catalogo.Filters;
+using Catalogo.Interface;
 using Catalogo.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,34 +11,38 @@ namespace Catalogo.Controllers;
 [Route("api/[controller]")]
 public class CategoriaController : ControllerBase
 {
-    private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly ILogger<CategoriaController> _logger;
-    public CategoriaController(AppDbContext context, IConfiguration configuration, ILogger<CategoriaController> logger)
+    private readonly ICategoryRepository _categoryRepository;
+    public CategoriaController(IConfiguration configuration, ILogger<CategoriaController> logger, ICategoryRepository categoryRepository)
     {
-        _context = context;
         _configuration = configuration;
         _logger = logger;
+        _categoryRepository = categoryRepository;
     }
     [HttpGet]
     [ServiceFilter(typeof(ApiLoggingFilter))]
-    public async Task<ActionResult<IEnumerable<Categoria>>> ListarCategorias()
+    public ActionResult<IEnumerable<Categoria>> ListarCategorias()
     {
         _logger.LogInformation("================ API/LISTAR CATEGORIAS");
-        return await _context.Categorias.ToListAsync();
+        return Ok(_categoryRepository.GetCategorias());
     }
     [HttpGet("{id:int}", Name = "ListarCategoriaPorId")]
     public async Task<ActionResult<Categoria>> ListarCategoriaPorId(int id)
     {
         _logger.LogInformation("================ API/LISTAR CATEGORIAS POR ID");
+        Categoria categoria = _categoryRepository.IdCategory(id);
+        if (categoria is null)
+        {
+            throw new ArgumentNullException();                
+        }
 
-        return await _context.Categorias.Where(p => p.CategoriaId == id).FirstOrDefaultAsync();
+        return Ok(categoria);
     }
     [HttpGet("ListarProd")]
     public ActionResult<IEnumerable<Categoria>> listarProdutosPorCategorias()
     {
-        throw new Exception("Excelçai ai retornar prod pelo id");
-        return _context.Categorias.Include(p => p.Produtos).ToList();
+        return _categoryRepository.listProductByCategory();
     }
     [HttpGet("LerArquivoConfigura")]
     public string GetValor()
@@ -56,8 +61,7 @@ public class CategoriaController : ControllerBase
 
             return BadRequest(ModelState);
         }
-        _context.Add(categoria);
-        _context.SaveChanges();
+        _categoryRepository.CreateCategory(categoria);
         return new CreatedAtRouteResult("ListarCategoriaPorId", new { id = categoria.CategoriaId }, categoria);
     }
     [HttpPut("{id:int}")]
@@ -69,17 +73,14 @@ public class CategoriaController : ControllerBase
             return BadRequest(ModelState);
 
         }
-        _context.Entry(categoria).State = EntityState.Modified;
-        _context.SaveChanges();
+      _categoryRepository.UpdateCategory(categoria);
         return Ok(categoria);
     }
 
     [HttpDelete("{id:int}")]
     public ActionResult Deletar(int id)
     {
-        Categoria categoria = _context.Categorias.FirstOrDefault(p => p.CategoriaId.Equals(id));
-        _context.Categorias.Remove(categoria);
-        _context.SaveChanges();
+        _categoryRepository.DeleteCategory(id);
         return Ok();
     }
 }
