@@ -3,6 +3,7 @@ using Catalogo.Extensions;
 using Catalogo.Filters;
 using Catalogo.Interface;
 using Catalogo.Logging;
+using Catalogo.Repositories;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
@@ -13,6 +14,10 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers(options => { options.Filters.Add(typeof(ApiExceptionFilter)); }).AddJsonOptions(o => o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<IProduct, ProductRepository>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 builder.Services.AddScoped<ApiLoggingFilter>();
 builder.Logging.AddProvider(new CustomerLoggerProvider(new CustomLoggerProviderConfiguration
 {
