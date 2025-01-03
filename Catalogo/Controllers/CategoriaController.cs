@@ -1,4 +1,6 @@
 ﻿using Catalogo.Context;
+using Catalogo.DTO;
+using Catalogo.Extensions;
 using Catalogo.Filters;
 using Catalogo.Interface;
 using Catalogo.Models;
@@ -23,13 +25,15 @@ public class CategoriaController : ControllerBase
     }
     [HttpGet]
     [ServiceFilter(typeof(ApiLoggingFilter))]
-    public ActionResult<IEnumerable<Categoria>> ListarCategorias()
+    public ActionResult<IEnumerable<CategoriaDTO>> ListarCategorias()
     {
         _logger.LogInformation("================ API/LISTAR CATEGORIAS");
-        return Ok(_uof.CategoryRepository.GetAll());
+      var categorias = _uof.CategoryRepository.GetAll();
+        var categoriaDTOs = categorias.ToCategoriaDtos();
+        return Ok(categoriaDTOs);
     }
     [HttpGet("{id:int}", Name = "ListarCategoriaPorId")]
-    public async Task<ActionResult<Categoria>> ListarCategoriaPorId(int id)
+    public ActionResult<CategoriaDTO> ListarCategoriaPorId(int id)
     {
         _logger.LogInformation("================ API/LISTAR CATEGORIAS POR ID");
         Categoria categoria = _uof.CategoryRepository.Get(c => c.CategoriaId == id);
@@ -38,36 +42,44 @@ public class CategoriaController : ControllerBase
             throw new ArgumentNullException();
         }
 
-        return Ok(categoria);
+        var categoriaDto = categoria.ToCategoriaDto() ;
+        return Ok(categoriaDto);
     }
     [HttpPost]
-    public ActionResult CriarCategoria([FromBody] Categoria categoria)
+    public ActionResult<CategoriaDTO> CriarCategoria(CategoriaDTO categoriaDto)
     {
         if (!ModelState.IsValid)
         {
 
             return BadRequest(ModelState);
         }
+
+        var categoria = categoriaDto.ToCategoria();
         _uof.CategoryRepository.Create(categoria);
         _uof.Commit();
-        return new CreatedAtRouteResult("ListarCategoriaPorId", new { id = categoria.CategoriaId }, categoria);
+        return new CreatedAtRouteResult("ListarCategoriaPorId", new { id = categoriaDto.CategoriaId }, categoriaDto);
     }
     [HttpPut("{id:int}")]
-    public ActionResult AtualizarProduto(int id, [FromBody] Categoria categoria)
+    public ActionResult<CategoriaDTO> AtualizarProduto(int id,CategoriaDTO categoriaDto)
     {
 
-        if (id != categoria.CategoriaId)
+        if (id != categoriaDto.CategoriaId)
         {
             return BadRequest(ModelState);
 
         }
-        _uof.CategoryRepository.Update(categoria);
+        var categoria = categoriaDto.ToCategoria();
+
+        var categoriaAtualizada = _uof.CategoryRepository.Update(categoria);
         _uof.Commit();
-        return Ok(categoria);
+
+        var categoriaAtualizadaDto = categoriaAtualizada.ToCategoriaDto();
+
+        return Ok(categoriaAtualizadaDto);
     }
 
     [HttpDelete("{id:int}")]
-    public ActionResult Deletar(int id)
+    public ActionResult<CategoriaDTO> Deletar(int id)
     {
         Categoria categoriaExcluida = _uof.CategoryRepository.Get(c => c.CategoriaId == id);
         if (categoriaExcluida is null)
@@ -78,6 +90,8 @@ public class CategoriaController : ControllerBase
 
         _uof.CategoryRepository.Delete(categoriaExcluida);
         _uof.Commit();
-        return Ok(categoriaExcluida);
+
+        var categoriaDto = categoriaExcluida.ToCategoriaDto();
+        return Ok(categoriaDto);
     }
 }
