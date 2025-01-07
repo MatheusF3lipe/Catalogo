@@ -1,6 +1,6 @@
 ﻿using Catalogo.Context;
 using Catalogo.DTO;
-using Catalogo.Extensions;
+using Catalogo.DTO.Mappings;
 using Catalogo.Filters;
 using Catalogo.Interface;
 using Catalogo.Models;
@@ -50,14 +50,16 @@ public class CategoriaController : ControllerBase
     {
         if (!ModelState.IsValid)
         {
-
             return BadRequest(ModelState);
         }
 
         var categoria = categoriaDto.ToCategoria();
-        _uof.CategoryRepository.Create(categoria);
+        
+        var CategoriaCriada = _uof.CategoryRepository.Create(categoria);
         _uof.Commit();
-        return new CreatedAtRouteResult("ListarCategoriaPorId", new { id = categoriaDto.CategoriaId }, categoriaDto);
+        var catDto = CategoriaCriada.ToCategoriaDto();
+
+        return new CreatedAtRouteResult("ListarCategoriaPorId",new { id = catDto.CategoriaId }, catDto);
     }
     [HttpPut("{id:int}")]
     public ActionResult<CategoriaDTO> AtualizarProduto(int id,CategoriaDTO categoriaDto)

@@ -1,7 +1,7 @@
 ﻿using Catalogo.DTO;
 using Catalogo.Models;
 
-namespace Catalogo.Extensions
+namespace Catalogo.DTO.Mappings
 {
     public static class CategoriaDTOMappingExtensions
     {
@@ -44,6 +44,7 @@ namespace Catalogo.Extensions
             }).ToList();
 
         }
+
 
     }
 }
