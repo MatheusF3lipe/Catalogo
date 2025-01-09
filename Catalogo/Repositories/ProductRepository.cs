@@ -1,5 +1,6 @@
 ﻿using Catalogo.Context;
 using Catalogo.Models;
+using Catalogo.Pagination;
 using Catalogo.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,5 +17,14 @@ namespace Catalogo.Interface
         {
             return GetAll().Where(c => c.CategoriaId == id);
         }
+
+        public PagedList<Produto> GetProdutosPagination(ProdutoParameters produtoParameters)
+        {
+            var produtos = GetAll().OrderBy(p =>  p.CategoriaId).AsQueryable();
+            var produtosOrdenados = PagedList<Produto>.ToPagedList(produtos, produtoParameters.PageNumber, produtoParameters.PageSize);
+
+            return produtosOrdenados;
+        }
+
     }
 }

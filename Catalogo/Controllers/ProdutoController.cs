@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
 using Catalogo.DTO;
 using Catalogo.Models;
+using Catalogo.Pagination;
 using Catalogo.Repositories;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 
 namespace Catalogo.Controllers;
@@ -19,6 +21,26 @@ public class ProdutoController : ControllerBase
     {
         _uof = uof;
         _mapper = mapper;
+    }
+    [HttpGet("GetProdutosPagination")]
+    public ActionResult<IEnumerable<ProdutoDTO>> Get([FromQuery] ProdutoParameters produtoParameters)
+    {
+        var produtos = _uof.ProdutoRepository.GetProdutosPagination(produtoParameters);
+        var produtosDto = _mapper.Map<IEnumerable<ProdutoDTO>>(produtos);
+
+        var metadata = new
+        {
+            produtos.TotalCount,
+            produtos.PageSize,
+            produtos.CurrentPage,
+            produtos.TotalPages,
+            produtos.HasNext,
+            produtos.HasPrevious
+        };
+
+        Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(metadata));    
+        
+        return Ok(produtosDto); 
     }
     [HttpGet("ListarProdutosPorCategoria")]
     public ActionResult<IEnumerable<ProdutoDTO>> GetProdutosCategoria(int id)
@@ -95,12 +117,12 @@ public class ProdutoController : ControllerBase
             return BadRequest();
 
         var produto = _uof.ProdutoRepository.Get(c => c.ProdutoId.Equals(id));
-        if(produto is null)
+        if (produto is null)
             return NotFound();
 
         var produtoUpdateRequest = _mapper.Map<ProdutoDtoUpdateRequest>(produto);
-        patchProdutoDto.ApplyTo(produtoUpdateRequest,ModelState);
-        if(!ModelState.IsValid || TryValidateModel(produtoUpdateRequest))
+        patchProdutoDto.ApplyTo(produtoUpdateRequest, ModelState);
+        if (!ModelState.IsValid || TryValidateModel(produtoUpdateRequest))
             return BadRequest(ModelState);
 
         _mapper.Map(produtoUpdateRequest, produto);
