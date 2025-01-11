@@ -8,5 +8,6 @@ namespace Catalogo.Interface
     {
         IEnumerable<Produto> GetProdutosPorCategoria(int id);
         PagedList<Produto> GetProdutosPagination(ProdutoParameters produtoParameters);
+        PagedList<Produto> GetProdutosFiltroPreco(ProdutosFiltroPreco produtoFiltroPreco);
     }
 }

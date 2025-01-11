@@ -26,5 +26,27 @@ namespace Catalogo.Interface
             return produtosOrdenados;
         }
 
+        public PagedList<Produto> GetProdutosFiltroPreco(ProdutosFiltroPreco produtoFiltroPreco)
+        {
+            var produtos = GetAll().AsQueryable();
+            if (produtoFiltroPreco.Preco.HasValue && !string.IsNullOrEmpty(produtoFiltroPreco.PrecoCriterio))
+            {
+                if (produtoFiltroPreco.PrecoCriterio.Equals("Maior", StringComparison.OrdinalIgnoreCase))
+                {
+                    produtos = produtos.Where(p => p.Preco > produtoFiltroPreco.Preco.Value).OrderBy(p => p.Preco);
+                }
+                else if (produtoFiltroPreco.PrecoCriterio.Equals("Menor", StringComparison.OrdinalIgnoreCase))
+                {
+                    produtos = produtos.Where(p => p.Preco < produtoFiltroPreco.Preco.Value).OrderBy(p => p.Preco);
+                }
+                else
+                {
+                    produtos = produtos.Where(p => p.Preco == produtoFiltroPreco.Preco.Value).OrderBy(p => p.Preco);
+                }
+            }
+            var produtosFiltrados = PagedList<Produto>.ToPagedList(produtos, produtoFiltroPreco.PageNumber, produtoFiltroPreco.PageSize);
+
+            return produtosFiltrados;
+        }
     }
 }
