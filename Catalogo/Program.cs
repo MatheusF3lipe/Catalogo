@@ -6,6 +6,7 @@ using Catalogo.Filters;
 using Catalogo.Interface;
 using Catalogo.Logging;
 using Catalogo.Repositories;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
@@ -27,6 +28,9 @@ builder.Logging.AddProvider(new CustomerLoggerProvider(new CustomLoggerProviderC
 }));
 
 
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication("Bearer").AddJwtBearer();
+builder.Services.AddIdentity<IdentityUser,IdentityRole>().AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
 string mySqlConnection = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
                     options.UseMySql(mySqlConnection

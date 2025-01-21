@@ -2,8 +2,7 @@
 using Catalogo.Models;
 using Catalogo.Pagination;
 using Catalogo.Repositories;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.EntityFrameworkCore;
+using X.PagedList;
 
 namespace Catalogo.Interface
 {
@@ -14,11 +13,27 @@ namespace Catalogo.Interface
 
         }
 
-        public PagedList<Categoria> GetCategoriasPagination(CategoriaParameters categoriasParameters)
+        public async Task<IPagedList<Categoria>> GetCategoriasFiltroNome(CategoriaFiltroNome categoriaParams)
         {
-            var categorias = GetAll().OrderBy(c => c.CategoriaId).AsQueryable();
-            var categoriasOrdenadas = PagedList<Categoria>.ToPagedList(categorias, categoriasParameters.PageNumber, categoriasParameters.PageSize);
-            return categoriasOrdenadas;
+            var categorias = await GetAllAsync();
+            if(!string.IsNullOrEmpty(categoriaParams.Nome))
+            {
+                categorias = categorias.Where(c => c.Nome.Contains(categoriaParams.Nome));
+            }
+
+            //var categoriasFiltradas = PagedList<Categoria>.ToPagedList(categorias.AsQueryable(), categoriaParams.PageNumber, categoriaParams.PageSize);
+            var categoriasFiltradas = await categorias.ToPagedListAsync(categoriaParams.PageNumber, categoriaParams.PageSize);
+
+            return categoriasFiltradas;      
+            
+        }
+
+        public async Task<IPagedList<Categoria>> GetCategoriasPagination(CategoriaParameters categoriasParameters)
+        {
+            var categorias = await GetAllAsync();
+            var categoriasOrdenadas = categorias.OrderBy(c => c.CategoriaId).AsQueryable();
+            var resultado = await categoriasOrdenadas.ToPagedListAsync(categoriasParameters.PageNumber, categoriasParameters.PageSize);
+            return resultado;
         }
     }
 }

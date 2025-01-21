@@ -6,6 +6,6 @@ namespace Catalogo.Repositories
     {
         IProduct ProdutoRepository { get; }
         ICategoryRepository CategoryRepository { get; }
-        void Commit();
+        Task CommitAsync();
     }
 }

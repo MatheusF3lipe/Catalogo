@@ -32,7 +32,7 @@ namespace Catalogo.Repositories
             }
         }
 
-        public void Commit()
+        public async Task CommitAsync()
         {
             _context.SaveChanges();
         }

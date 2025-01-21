@@ -3,6 +3,7 @@ using Catalogo.Models;
 using Catalogo.Pagination;
 using Catalogo.Repositories;
 using Microsoft.EntityFrameworkCore;
+using X.PagedList;
 
 namespace Catalogo.Interface
 {
@@ -13,22 +14,25 @@ namespace Catalogo.Interface
             
         }
 
-        public IEnumerable<Produto> GetProdutosPorCategoria(int id)
+        public async Task<IEnumerable<Produto>> GetProdutosPorCategoriaAsync(int id)
         {
-            return GetAll().Where(c => c.CategoriaId == id);
-        }
-
-        public PagedList<Produto> GetProdutosPagination(ProdutoParameters produtoParameters)
-        {
-            var produtos = GetAll().OrderBy(p =>  p.CategoriaId).AsQueryable();
-            var produtosOrdenados = PagedList<Produto>.ToPagedList(produtos, produtoParameters.PageNumber, produtoParameters.PageSize);
-
+            var produtos = await GetAllAsync();
+            var produtosOrdenados = produtos.Where(c => c.CategoriaId == id);
             return produtosOrdenados;
         }
 
-        public PagedList<Produto> GetProdutosFiltroPreco(ProdutosFiltroPreco produtoFiltroPreco)
+        public async Task<IPagedList<Produto>> GetProdutosPaginationAsync(ProdutoParameters produtoParameters)
         {
-            var produtos = GetAll().AsQueryable();
+            var produtos = await GetAllAsync();
+            var produtorOrdenados = produtos.OrderBy(p => p.CategoriaId).AsQueryable();
+            var resultado = await produtorOrdenados.ToPagedListAsync(produtoParameters.PageNumber, produtoParameters.PageSize);
+
+            return resultado;
+        }
+
+        public async Task <IPagedList<Produto>> GetProdutosFiltroPrecoAsync(ProdutosFiltroPreco produtoFiltroPreco)
+        {
+            var produtos = await GetAllAsync();
             if (produtoFiltroPreco.Preco.HasValue && !string.IsNullOrEmpty(produtoFiltroPreco.PrecoCriterio))
             {
                 if (produtoFiltroPreco.PrecoCriterio.Equals("Maior", StringComparison.OrdinalIgnoreCase))
@@ -44,7 +48,7 @@ namespace Catalogo.Interface
                     produtos = produtos.Where(p => p.Preco == produtoFiltroPreco.Preco.Value).OrderBy(p => p.Preco);
                 }
             }
-            var produtosFiltrados = PagedList<Produto>.ToPagedList(produtos, produtoFiltroPreco.PageNumber, produtoFiltroPreco.PageSize);
+            var produtosFiltrados = await produtos.ToPagedListAsync(produtoFiltroPreco.PageNumber, produtoFiltroPreco.PageSize);
 
             return produtosFiltrados;
         }
