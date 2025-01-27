@@ -1,6 +1,8 @@
 ﻿using Catalogo.DTO;
 using Catalogo.Models;
 using Catalogo.Service;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
@@ -16,13 +18,15 @@ namespace Catalogo.Controllers
         private readonly UserManager<AplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(ITokenService tokenService, UserManager<AplicationUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration)
+        public AuthController(ITokenService tokenService, UserManager<AplicationUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration, ILogger<AuthController> logger)
         {
             _tokenService = tokenService;
             _userManager = userManager;
             _roleManager = roleManager;
             _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpPost("Login")]
@@ -81,7 +85,75 @@ namespace Catalogo.Controllers
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Error = "User Creation failed." });
             }
-            return Ok(new Response { Status = "Success", Error = "User Created succefully" }); 
+            return Ok(new Response { Status = "Success", Error = "User Created succefully" });
+
+        }
+        [HttpPost("Refresh-Token")]
+        public async Task<IActionResult> RefreshToken(TokenModel tokenModel)
+        {
+            if (tokenModel is null)
+                return BadRequest("Invalid client request");
+
+            string? accesToken = tokenModel.AcessToken ?? throw new ArgumentNullException(nameof(tokenModel));
+            string? refreshToken = tokenModel.RefreshToken ?? throw new ArgumentNullException(nameof(tokenModel));
+
+            var principal = _tokenService.GetPrincipalFromExpiredToken(accesToken!, _configuration);
+
+            if (principal is null)
+                return BadRequest("Invalid acces token/refresh token");
+
+            string username = principal.Identity.Name;
+            var user = await _userManager.FindByNameAsync(username!);
+            if (user is null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
+                return BadRequest("Invalid access token/refresh token");
+
+            var newAccessToken = _tokenService.GenerateAccessToken(principal.Claims.ToList(), _configuration);
+
+            var newRefreshTOken = _tokenService.GenerateRefreshToken();
+
+            user.RefreshToken = newRefreshTOken;
+            await _userManager.UpdateAsync(user);
+
+            return new ObjectResult(new
+            {
+                accesToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
+                refreshToken = newRefreshTOken
+            });
+        }
+        [Authorize]
+        [HttpPost]
+        [Route("revoke/{username}")]
+        public async Task<IActionResult> Revoke(string username)
+        {
+            var user = await _userManager.FindByNameAsync(username);
+            if (user is null) return BadRequest("Invalid Username");
+            user.RefreshToken = null;
+
+            await _userManager.UpdateAsync(user);
+            return NoContent();
+        }
+        [HttpPost("Create-Role")]
+        public async Task<IActionResult> CreateRole(string roleName)
+        {
+            var roleExist = await _roleManager.RoleExistsAsync(roleName);
+            if (!roleExist)
+            {
+                var roleResult = await _roleManager.CreateAsync(new IdentityRole(roleName));
+                if (roleResult.Succeeded)
+                {
+                    _logger.LogInformation(1, "Roles Added");
+                    return StatusCode(StatusCodes.Status200OK, new Response { Status = "Success", Error = $"Role {roleName} added successfuly" });
+                }
+                else
+                {
+                    _logger.LogInformation(2, "Error");
+                    return StatusCode(StatusCodes.Status400BadRequest, new Response { Status = "Error", Error = $"Issue adding the new {roleName} role" });
+                }
+
+            }else
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, new Response { Status = "Error", Error = "Role already exists! ." });
+            }
 
         }
     }
