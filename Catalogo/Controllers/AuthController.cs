@@ -3,6 +3,7 @@ using Catalogo.Models;
 using Catalogo.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
@@ -40,6 +41,7 @@ namespace Catalogo.Controllers
                 {
                     new Claim(ClaimTypes.Name,user.UserName),
                     new Claim(ClaimTypes.Email,user.Email),
+                    new Claim("id",user.UserName!),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
                 };
                 foreach (var userRole in useRoles)
@@ -120,9 +122,9 @@ namespace Catalogo.Controllers
                 refreshToken = newRefreshTOken
             });
         }
-        [Authorize]
         [HttpPost]
         [Route("revoke/{username}")]
+        [Authorize(Policy = "ExclusivePolicyOnly")]
         public async Task<IActionResult> Revoke(string username)
         {
             var user = await _userManager.FindByNameAsync(username);
@@ -133,6 +135,7 @@ namespace Catalogo.Controllers
             return NoContent();
         }
         [HttpPost("Create-Role")]
+        [Authorize(Policy = "SuperAdminOnly")]
         public async Task<IActionResult> CreateRole(string roleName)
         {
             var roleExist = await _roleManager.RoleExistsAsync(roleName);
@@ -150,11 +153,33 @@ namespace Catalogo.Controllers
                     return StatusCode(StatusCodes.Status400BadRequest, new Response { Status = "Error", Error = $"Issue adding the new {roleName} role" });
                 }
 
-            }else
+            } else
             {
                 return StatusCode(StatusCodes.Status400BadRequest, new Response { Status = "Error", Error = "Role already exists! ." });
             }
 
+        }
+        [HttpPost("AddUserRole")]
+        [Authorize(Policy = "SuperAdminOnly")]
+        public async Task<IActionResult> AddUserRole(string email, string roleNAme)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user != null)
+            {
+                var result = await _userManager.AddToRoleAsync(user, roleNAme);
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation(1, $"User {user.Email} added to the {roleNAme} role");
+                    return StatusCode(StatusCodes.Status200OK, new Response { Status = "Succes!", Error = $"User {user.Email} added to the {roleNAme} role" });
+                }
+                else
+                {
+                    _logger.LogInformation(1, $"Error! unable to add user {user.Email} to the {roleNAme} role ");
+                }
+            }
+            return BadRequest(new { error = "Unable to find user" });
         }
     }
 }

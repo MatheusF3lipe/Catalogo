@@ -1,4 +1,4 @@
-using Catalogo.Context;
+ using Catalogo.Context;
 using Catalogo.DTO;
 using Catalogo.DTO.Mappings;
 using Catalogo.Extensions;
@@ -13,8 +13,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Configuration;
-using System.Security.Cryptography.Xml;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -24,8 +22,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title ="apicatalogo", Version = "v1"});
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme() 
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "apicatalogo", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
     {
         Name = "Authorization",
         Type = SecuritySchemeType.ApiKey,
@@ -55,7 +53,7 @@ builder.Services.AddControllers(options => { options.Filters.Add(typeof(ApiExcep
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IProduct, ProductRepository>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-builder.Services.AddScoped<ITokenService, TokenService > ();
+builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddAutoMapper(typeof(ProdutoDTOMappingProfile));
 builder.Services.AddScoped<ApiLoggingFilter>();
@@ -89,6 +87,18 @@ builder.Services.AddAuthentication(opt =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
     };
 });
+
+builder.Services.AddAuthorization(option =>
+{
+    option.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    option.AddPolicy("SuperAdminOnly", Policy => Policy.RequireRole("Admin").RequireClaim("id","nocap"));
+    option.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
+    option.AddPolicy("ExclusivePolicyOnly", policy =>
+    {
+        policy.RequireAssertion(context => context.User.HasClaim(claim => claim.Type == "id" && claim.Value == "Eliana") || context.User.IsInRole("SuperAdmin"));
+    });
+});
+
 
 string mySqlConnection = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>

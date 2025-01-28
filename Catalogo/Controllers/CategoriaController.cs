@@ -71,7 +71,7 @@ public class CategoriaController : ControllerBase
     }
     [HttpGet]
     [ServiceFilter(typeof(ApiLoggingFilter))]
-    [Authorize]
+    [Authorize(Policy = "UserOnly")]
     public async Task <ActionResult<IEnumerable<CategoriaDTO>>> ListarCategorias()
     {
         _logger.LogInformation("================ API/LISTAR CATEGORIAS");
@@ -127,7 +127,9 @@ public class CategoriaController : ControllerBase
         return Ok(categoriaAtualizadaDto);
     }
 
+
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task <ActionResult<CategoriaDTO>> Deletar(int id)
     {
         Categoria categoriaExcluida = await _uof.CategoryRepository.GetAsync(c => c.CategoriaId == id);

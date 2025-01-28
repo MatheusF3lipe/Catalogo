@@ -3,6 +3,7 @@ using Catalogo.DTO;
 using Catalogo.Models;
 using Catalogo.Pagination;
 using Catalogo.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -76,6 +77,7 @@ public class ProdutoController : ControllerBase
         return Ok(produtosDto);
     }
     [HttpGet("ListarTodosOsProdutos")]
+    [Authorize(Policy = "UserOnly")]
     public async Task <ActionResult<IEnumerable<ProdutoDTO>>> GetProdutos()
     {
         var produtos = await _uof.ProdutoRepository.GetAllAsync();
